@@ -266,6 +266,7 @@
 
     /* ===== PDF load/render ===== */
     let pdf = null, total = 0, current = 1;
+    let pdfFileName = ""; // <-- NEW: holds the loaded pdf file name
 
     async function renderPage(n) {
       if (!pdf) return;
@@ -280,6 +281,8 @@
     async function loadPdf(name) {
       const safe = sanitizePdfName(name);
       if (!safe) { setStatus("Invalid ?fileName parameter.", "err"); throw new Error("invalid name"); }
+
+      pdfFileName = safe; // <-- NEW: store the file name for later prompts
 
       const url = new URL("./" + safe, location.href);
       const cachedBlob = await getCachedChunks(safe);
@@ -309,12 +312,16 @@
       return text.items.map(i=>i.str).join(" ").replace(/\s+/g," ").trim();
     }
 
-    // Original "4chan: explain this" copy button
+    // Modified "4chan: explain this" copy button:
+    // now tells ChatGPT to start with "{pdfFileName}-{timeStamp}" on the first line
     copyBtn.addEventListener("click", async ()=>{
       const origHTML = copyBtn.innerHTML;
       try{
-        const raw=await extractCurrentPageText();
-        const prefixed=`4chan: explain this using 4o ${raw}`;
+        const raw = await extractCurrentPageText();
+        const timeStamp = new Date().toISOString();
+        const prefixed =
+          `4chan: use "${pdfFileName}-${timeStamp}" as the first line of your response, then explain this using 4o ${raw}`;
+
         await navigator.clipboard.writeText(prefixed);
         // New ChatGPT app URL
         window.open(`https://chat.openai.com/?q=${encodeURIComponent(prefixed)}`,"_blank","noopener");
@@ -327,7 +334,7 @@
       }
     });
 
-    // New "Amp2 explain this:" copy button
+    // Unchanged "Amp2 explain this:" copy button
     amp2Btn.addEventListener("click", async ()=>{
       const origHTML = amp2Btn.innerHTML;
       try{
